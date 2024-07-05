@@ -12,42 +12,48 @@ function Create-SharePoint-Fields {
         [hashtable]$LookUpAttributes = $null  
     )
     
-    # Create a new List if not exists
-    $List = Get-PnPList -Identity $ListName -ErrorAction SilentlyContinue
+    try {
 
-    if ($null -eq $List) {
-        Write-Host "Creating a new list..."
-        New-PnPList -Title $ListName -Template GenericList
-    }
+        # Create a new List if not exists
+        $List = Get-PnPList -Identity $ListName -ErrorAction SilentlyContinue
 
-    # Add a new column to the list if not exists
-    foreach ($column in $Columns.Keys) {
-        $Column = $column
-        $Type = $Columns.$Column
-        $ColumnExists = Get-PnPField -List $ListName -Identity $Column -ErrorAction SilentlyContinue
-        if ($null -eq $ColumnExists) {
-            Write-Host "Adding column $Column..."
-            if ($Type -eq "Choice") {
-                Add-PnPField -List $ListName -Type $Type -DisplayName $Column -InternalName $Column -Choices $Choice_Options.$Column -AddToDefaultView 
-            }
-            elseif ($Type -eq "Lookup") {
-                Add-PnPField -List $ListName -Type $Type -DisplayName $Column -InternalName $Column -AddToDefaultView
-                Set-PnPField -List $ListName -Identity $Column -Values @{LookupList = (Get-PnPList $LookUpAttributes.$Column[0]).Id.ToString(); LookupField = $LookUpAttributes.$Column[1] }
+        if ($null -eq $List) {
+            Write-Host "Creating a new list..."
+            New-PnPList -Title $ListName -Template GenericList
+        }
+
+        # Add a new column to the list if not exists
+        foreach ($column in $Columns.Keys) {
+            $Column = $column
+            $Type = $Columns.$Column
+            $ColumnExists = Get-PnPField -List $ListName -Identity $Column -ErrorAction SilentlyContinue
+            if ($null -eq $ColumnExists) {
+                Write-Host "Adding column $Column..."
+                if ($Type -eq "Choice") {
+                    Add-PnPField -List $ListName -Type $Type -DisplayName $Column -InternalName $Column -Choices $Choice_Options.$Column -AddToDefaultView 
+                }
+                elseif ($Type -eq "Lookup") {
+                    Add-PnPField -List $ListName -Type $Type -DisplayName $Column -InternalName $Column -AddToDefaultView
+                    Set-PnPField -List $ListName -Identity $Column -Values @{LookupList = (Get-PnPList $LookUpAttributes.$Column[0]).Id.ToString(); LookupField = $LookUpAttributes.$Column[1] }
+                }
+                else {
+                    Add-PnPField -List $ListName -Type $Type -DisplayName $Column -InternalName $Column -AddToDefaultView
+                }
+                Write-Host "Column $Column added."
             }
             else {
-                Add-PnPField -List $ListName -Type $Type -DisplayName $Column -InternalName $Column -AddToDefaultView
+                Write-Host "Column $Column already exists."
             }
-            Write-Host "Column $Column added."
         }
-        else {
-            Write-Host "Column $Column already exists."
-        }
+
+        Write-Host "List $ListName created successfully."
+
+        # Pause for 2 seconds
+        Start-Sleep -Seconds 2
+
+    } catch {
+        Write-Host "Error: $_"
     }
-
-    Write-Host "List $ListName created successfully."
-
-    # Pause for 2 seconds
-    Start-Sleep -Seconds 2
 
 
 }
@@ -78,31 +84,38 @@ function Add-SharePoint-Items {
         [array]$Items
     )
 
-    # Check if the list exists
-    $List = Get-PnPList -Identity $ListName -ErrorAction SilentlyContinue
 
-    if ($null -eq $List) {
-        Write-Host "List $ListName does not exist."
-        return
-    }
+    try {
 
-    # Add items to the list
-    foreach ($item in $Items) {
-        $ItemExists = Get-PnPListItem -List $ListName -Query "<View><Query><Where><Eq><FieldRef Name='Title'/><Value Type='Text'>$($item.Title)</Value></Eq></Where></Query></View>"
-        if ($null -eq $ItemExists) {
-            Write-Host "Adding item $($item.Title)..."
-            Add-PnPListItem -List $ListName -Values $item
-            Write-Host "Item $($item.Title) added."
+        # Check if the list exists
+        $List = Get-PnPList -Identity $ListName -ErrorAction SilentlyContinue
+
+        if ($null -eq $List) {
+            Write-Host "List $ListName does not exist."
+            return
         }
-        else {
-            Write-Host "Item $($item.Title) already exists."
+
+        # Add items to the list
+        foreach ($item in $Items) {
+            $ItemExists = Get-PnPListItem -List $ListName -Query "<View><Query><Where><Eq><FieldRef Name='Title'/><Value Type='Text'>$($item.Title)</Value></Eq></Where></Query></View>"
+            if ($null -eq $ItemExists) {
+                Write-Host "Adding item $($item.Title)..."
+                Add-PnPListItem -List $ListName -Values $item
+                Write-Host "Item $($item.Title) added."
+            }
+            else {
+                Write-Host "Item $($item.Title) already exists."
+            }
         }
+
+        Write-Host "Items added successfully."
+
+        # Pause for 2 seconds
+        Start-Sleep -Seconds 2
+
+    } catch {
+        Write-Host "Error: $_"
     }
-
-    Write-Host "Items added successfully."
-
-    # Pause for 2 seconds
-    Start-Sleep -Seconds 2
 
 }
 
@@ -131,21 +144,26 @@ function Remove-SharePoint-List {
         [string]$ListName
     )
 
-    # Check if the list exists
-    $List = Get-PnPList -Identity $ListName -ErrorAction SilentlyContinue
+    try {
+        # Check if the list exists
+        $List = Get-PnPList -Identity $ListName -ErrorAction SilentlyContinue
 
-    if ($null -eq $List) {
-        Write-Host "List $ListName does not exist."
-        return
+        if ($null -eq $List) {
+            Write-Host "List $ListName does not exist."
+            return
+        }
+
+        # Remove the list
+        Remove-PnPList -Identity $ListName -Force
+
+        Write-Host "List $ListName deleted successfully."
+
+        # Pause for 2 seconds
+        Start-Sleep -Seconds 2
+
+    } catch {
+        Write-Host "Error: $_"
     }
-
-    # Remove the list
-    Remove-PnPList -Identity $ListName -Force
-
-    Write-Host "List $ListName deleted successfully."
-
-    # Pause for 2 seconds
-    Start-Sleep -Seconds 2
 
 }
 
@@ -161,14 +179,20 @@ function Remove-SharePoint-Lists {
         [array]$ListNames
     )
 
-    foreach ($ListName in $ListNames) {
-        Remove-SharePoint-List -ListName $ListName
+    try {
+
+        foreach ($ListName in $ListNames) {
+            Remove-SharePoint-List -ListName $ListName
+        }
+
+        Write-Host "All lists deleted successfully."
+
+        # Pause for 2 seconds
+        Start-Sleep -Seconds 2
+
+    } catch {
+        Write-Host "Error: $_"
     }
-
-    Write-Host "All lists deleted successfully."
-
-    # Pause for 2 seconds
-    Start-Sleep -Seconds 2
 
 }
 
@@ -184,21 +208,26 @@ function Add-SharePoint-List {
         [string]$ListName
     )
 
-    # Check if the list exists
-    $List = Get-PnPList -Identity $ListName -ErrorAction SilentlyContinue
+    try {
+        # Check if the list exists
+        $List = Get-PnPList -Identity $ListName -ErrorAction SilentlyContinue
 
-    if ($null -ne $List) {
-        Write-Host "List $ListName already exists."
-        return
+        if ($null -ne $List) {
+            Write-Host "List $ListName already exists."
+            return
+        }
+
+        # Add a new list
+        New-PnPList -Title $ListName -Template GenericList -Url "lists/$ListName"
+
+        Write-Host "List $ListName created successfully."
+
+        # Pause for 2 seconds
+        Start-Sleep -Seconds 2
+
+    } catch {
+        Write-Host "Error: $_"
     }
-
-    # Add a new list
-    New-PnPList -Title $ListName -Template GenericList -Url "lists/$ListName"
-
-    Write-Host "List $ListName created successfully."
-
-    # Pause for 2 seconds
-    Start-Sleep -Seconds 2
 
 }
 

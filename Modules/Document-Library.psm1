@@ -1,8 +1,7 @@
 # Just Import as Module: Import-Module -Name .\Modules\Document-Library.psm1
 # Example for every Function are provided below
 
-# Create-DocumentLibrary
-
+# Create-DocumentLibrary Function
 function Create-DocumentLibrary {
     param (
         [Parameter(Mandatory = $true)]
@@ -25,6 +24,8 @@ function Create-DocumentLibrary {
 
 # Example:
 # Create-DocumentLibrary -LibraryName "Test Library" -TemplateType "DocumentLibrary"
+
+#########################################################################################################
 
 # Export all functions
 Export-ModuleMember -Function *
