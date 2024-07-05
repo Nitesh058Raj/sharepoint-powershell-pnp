@@ -30,10 +30,11 @@ function Create-ContentType {
 # Create-ContentType -Name "TestContentType" -Description "Test Content Type" -Group "Test Group"
 
 # Add-SiteColumnToContentType
+# Use the Add-PnPFieldToContentType cmdlet to add a site column to a content type, because for some reason the Add-PnPFieldToContentType cmdlet is not working as expected in this function.
 function Add-SiteColumnToContentType {
     param (
         [Parameter(Mandatory = $true)]
-        [string]$SiteColumn,
+        [string]$SiteColumn, # Internal Name of the Site Column 
         [Parameter(Mandatory = $true)]
         [string]$ContentType
     )
@@ -56,6 +57,8 @@ function Add-SiteColumnToContentType {
 
 # Example:
 # Create-ContentType -Name "TestContentType" -Description "Test Content Type" -Group "Test Group"
+# Use below command to add site column to content type instead of Add-SiteColumnToContentType function
+# Add-SiteColumnToContentType -SiteColumn "Test_Site_Column_v3" -ContentType "TestContentType"
 
 # Export all functions
 Export-ModuleMember -Function *
