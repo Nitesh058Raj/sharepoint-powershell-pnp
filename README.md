@@ -1,7 +1,7 @@
 ## Introduction
 
 This github repo contains PowerShell scripts related to SharePoint. 
-Please see the module files (*.psm1) they have examples for 'how to use'. 
+Please see the module files (*.psm1) in Modules folder, they have examples for 'how to use'. 
 
 ## Usage
 

@@ -1,4 +1,4 @@
-# Just Import as Module: Import-Module -Name .\SharePoint-Lists.psm1
+# Just Import as Module: Import-Module -Name .\Modules\SharePoint-Lists.psm1
 
 # Example for every Function are provided below
 
@@ -68,9 +68,7 @@ function Create-SharePoint-Fields {
 #     Leave_Type = @("Leave Types", "Title")
 # }
 
-'''
--------------------------------------------------------------------------------
-'''
+#########################################################################################################
 
 # Add-SharePoint-Items Function 
 function Add-SharePoint-Items {
@@ -122,9 +120,9 @@ function Add-SharePoint-Items {
 #     }
 # )
 
-'''
--------------------------------------------------------------------------------
-'''
+
+#########################################################################################################
+
 
 # Remove-SharePoint-List Function
 function Remove-SharePoint-List {
@@ -154,9 +152,7 @@ function Remove-SharePoint-List {
 # Example:
 # Remove-SharePoint-List -ListName "Leave Types"
 
-'''
--------------------------------------------------------------------------------
-'''
+#########################################################################################################
 
 # Remove-SharePoint-Lists Function
 function Remove-SharePoint-Lists {
@@ -179,9 +175,37 @@ function Remove-SharePoint-Lists {
 # Example:
 # Remove-SharePoint-Lists -ListNames @("Leave Types", "Leave Requests")
 
-'''
--------------------------------------------------------------------------------
-'''
+#########################################################################################################
+
+# Add-SharePoint-List Function
+function Add-SharePoint-List {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$ListName
+    )
+
+    # Check if the list exists
+    $List = Get-PnPList -Identity $ListName -ErrorAction SilentlyContinue
+
+    if ($null -ne $List) {
+        Write-Host "List $ListName already exists."
+        return
+    }
+
+    # Add a new list
+    New-PnPList -Title $ListName -Template GenericList -Url "lists/$ListName"
+
+    Write-Host "List $ListName created successfully."
+
+    # Pause for 2 seconds
+    Start-Sleep -Seconds 2
+
+}
+
+# Example:
+# Add-SharePoint-List -ListName "Leave Types"
+
+#########################################################################################################
 
 # Export the functions
 Export-ModuleMember -Function *
