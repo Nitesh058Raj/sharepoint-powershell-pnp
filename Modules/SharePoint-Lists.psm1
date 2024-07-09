@@ -1,15 +1,16 @@
 # Just Import as Module: Import-Module -Name .\Modules\SharePoint-Lists.psm1
-
-# Example for every Function are provided below
+# Example for every Function are provided after each Function
 
 # Create-SharePoint-Fields
 function Create-SharePoint-Fields {
     param (
         [Parameter(Mandatory = $true)]
         [string]$ListName,
+        [Parameter(Mandatory = $true)]
         [hashtable]$Columns,
         [hashtable]$Choice_Options = $null,
-        [hashtable]$LookUpAttributes = $null  
+        [hashtable]$LookUpAttributes = $null,
+        [hashtable]$Formulas = $null
     )
     
     try {
@@ -29,14 +30,15 @@ function Create-SharePoint-Fields {
             $ColumnExists = Get-PnPField -List $ListName -Identity $Column -ErrorAction SilentlyContinue
             if ($null -eq $ColumnExists) {
                 Write-Host "Adding column $Column..."
-                if ($Type -eq "Choice") {
+                if ($Type -eq "Choice" -or $Type -eq "MultiChoice") {
                     Add-PnPField -List $ListName -Type $Type -DisplayName $Column -InternalName $Column -Choices $Choice_Options.$Column -AddToDefaultView 
                 }
                 elseif ($Type -eq "Lookup") {
                     Add-PnPField -List $ListName -Type $Type -DisplayName $Column -InternalName $Column -AddToDefaultView
                     Set-PnPField -List $ListName -Identity $Column -Values @{LookupList = (Get-PnPList $LookUpAttributes.$Column[0]).Id.ToString(); LookupField = $LookUpAttributes.$Column[1] }
-                }
-                else {
+                } elseif ($Type -eq "Calculated") {
+                    Add-PnPField -List $ListName -Type $Type -DisplayName $Column -InternalName $Column -Formula $Formulas.$Column -AddToDefaultView
+                } else {
                     Add-PnPField -List $ListName -Type $Type -DisplayName $Column -InternalName $Column -AddToDefaultView
                 }
                 Write-Host "Column $Column added."
@@ -44,10 +46,12 @@ function Create-SharePoint-Fields {
             else {
                 Write-Host "Column $Column already exists."
             }
+
+            Start-Sleep -Seconds 5
+
         }
 
-        Write-Host "List $ListName created successfully."
-
+        Write-Host "Columns added successfully."
         # Pause for 2 seconds
         Start-Sleep -Seconds 2
 
@@ -58,21 +62,58 @@ function Create-SharePoint-Fields {
 
 }
 # Example:
-# Create-SharePoint-Fields -ListName "Leave Requests" -Columns $Columns -Choice_Options $Choice_Options -LookUpAttributes $LookUpAttributes
-# Where $Columns, $Choice_Options, and $LookUpAttributes are defined as:
+# Create-SharePoint-Fields -ListName "Leave Requests" -Columns $Columns -Choice_Options $Choice_Options -LookUpAttributes $LookUpAttributes -Formulas $Formulas
+# Where $Columns, $Choice_Options, $LookUpAttributes and $Formulas are defined as:
 # $Columns = @{
-#     Leave_Type       = "Lookup"
-#     Leave_Start_Date = "DateTime"
-#     Leave_Status     = "Choice"
+#   "Title" = "Text"                            # Pre-Defined (Single Line of Text)
+#   "Description" = "Note"                      # Works Fine (Multiple Lines of Text)
+#   "Favorite_Color" = "Choice"                 # Works Fine (Single Choice: Select One Option)
+#   "BirthDate" = "DateTime"                    # Works Fine (Date and Time)
+#   "Attched_Person" = "Lookup"                 # Works Fine (Lookup: Choose from another list)
+#   "Favorite_Number" = "Number"                # Works Fine (Integer)
+#   "Id2" = "Counter"                           # Not Supported (Need more information)
+#   "Is_Active" = "Boolean"                     # Works Fine (Yes/No)
+#   "Balance" = "Currency"                      # Works Fine (Currency)
+#   "Link" = "URL"                              # Works Fine (Hyperlink)
+#   "T1" = "Threading"                          # Error (Not Supported)
+#   "G1" = "Guid"                               # Works Fine (Guid)
+#   "Some_Lauguage" = "MultiChoice"             # Works Fine (MultiChoice: Select Multiple Options)
+#   "Person" = "User"                           # Works Fine (User or Group)
+#   "Grid" = "GridChoice"                       # Added But Not Working (Or Not know how to use it)
+#   "Location" = "Location"                     # Works Fine (Location)
+#   "File" = "File"                             # Not Supported (Need more information)
+#   "Image" = "Image"                           # Not Supported
+#   "Recurrence" = "Recurrence"                 # Not Supported For Form (Need more information) (Recurrence: 0/1)
+#   "CrossProjectLink" = "CrossProjectLink"     # Not Supported For Form (Need more information) (CrossProjectLink: 0/1)
+#   "ModStat" = "ModStat"                       # Works Fine (Moderation Status: Approved, Rejected, Pending)
+#   "Error" = "Error"                           # Error (Not Supported)
+#   "ContentType" = "ContentTypeId"             # Already Exists
+#   "PageSeparator" = "PageSeparator"           # For Survey List Only (Need more information)
+#   "ThreadIndex" = "ThreadIndex"               # Error (Not Supported)    
+#   "WorkflowStatus" = "WorkflowStatus"         # Error (Not Supported)
+#   "OutcomeChoice" = "OutcomeChoice"           # Exists But Don't know the use cases | WorkFlow Outcome (Approved, Rejected)
+#   "AllDayEvent" = "AllDayEvent"               # Works But Not supported to Form (Yes/No)
+#   "WorkflowEventType" = "WorkflowEventType"   # Exists But Don't know the use cases | WorkFlow Event Type (Item Added, Item Updated, Item Deleted, etc.)
+#   "Geolocation" = "Geolocation"               # Not Supported (Need more information)
+#   "Outcome" = "OutcomeChoice"                 # Exists But Don't know the use cases | WorkFlow Outcome (Approved, Rejected)
+#   "Thumbnail" = "Thumbnail"                   # Works Fine (Thumbnail: Image)
+#   "MaxItems" = "MaxItems"                     # Error (Not Supported)
+#   "Calculated_1" = "Calculated"               # Works Fine (Calculated) 
 # }
 #
 # $Choice_Options = @{
-#     "Leave_Status" = @("Pending", "Approved", "Rejected", "Depreciated")
+#   "Favorite_Color" = @("Red", "Green", "Blue", "Yellow", "Cyan", "Magenta", "Lime", "Orange", "Purple", "Pink")
+#   "Some_Lauguage" = @("English", "Spanish", "French", "German", "Italian", "Dutch", "Portuguese", "Russian", "Chinese", "Japanese")
 # }
 #
 # $LookUpAttributes = @{
-#     Leave_Type = @("Leave Types", "Title")
+#   "Attched_Person" = @("Test1", "Title")
 # }
+# 
+# $Formulas = @{
+#   "Calculated_1" = "=[Title]"
+# }
+
 
 #########################################################################################################
 
@@ -233,6 +274,126 @@ function Add-SharePoint-List {
 
 # Example:
 # Add-SharePoint-List -ListName "Leave Types"
+
+#########################################################################################################
+
+# Remove-SharePoint-List-Fields Function
+function Remove-SharePoint-List-Fields {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$ListName,
+        [array]$Columns
+    )
+
+    try {
+
+        # Check if the list exists
+        $List = Get-PnPList -Identity $ListName -ErrorAction SilentlyContinue
+
+        if ($null -eq $List) {
+            Write-Host "List $ListName does not exist."
+            return
+        }
+
+        # Remove columns from the list
+        foreach ($column in $Columns) {
+            $ColumnExists = Get-PnPField -List $ListName -Identity $column -ErrorAction SilentlyContinue
+            if ($null -ne $ColumnExists) {
+                Write-Host "Removing column $column..."
+                Remove-PnPField -List $ListName -Identity $column -Force
+                Write-Host "Column $column removed."
+            }
+            else {
+                Write-Host "Column $column does not exist."
+            }
+        }
+
+        Write-Host "Columns removed successfully."
+
+        # Pause for 2 seconds
+        Start-Sleep -Seconds 2
+
+    } catch {
+        Write-Host "Error: $_"
+    }
+
+}
+
+# Break-Inheritance-List-Item Function
+function Break-Inheritance-List-Item {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$ListItemName,
+        [Parameter(Mandatory = $true)]
+        [string]$ListName
+    )
+
+    try {
+
+        $query = "<View><Query><Where><Eq><FieldRef Name='Title'/><Value Type='Text'>$ListItemName</Value></Eq></Where></Query></View>"
+        $ListItemDetails = Get-PnPListItem -List $ListName -Query $query -ErrorAction SilentlyContinue
+        $ListItem = Get-PnPListItem -List $ListName -Id $ListItemDetails.Id -ErrorAction SilentlyContinue
+
+        if ($null -eq $ListItem) {
+            Write-Host "List Item $ListItemName not found in list $ListName."
+            return
+        }    
+        else {
+            # Write-Host "List Item $ListItemName found in list $ListName."
+
+            $ListItem.BreakRoleInheritance($true, $true)
+            $ListItem.Update()
+            Invoke-PnPQuery
+
+            Write-Host "Inheritance broken successfully for list item $ListItemName in list $ListName."
+            return  
+        }
+    }
+    catch {
+        Write-Host "Error: $_"
+    }
+
+}
+
+# Example:
+# Break-Inheritance-List-Item -ListItemName "Annual Leave" -ListName "Leave Types"
+
+#########################################################################################################
+
+# Break-Inheritance-List Function
+function Break-Inheritance-List {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$ListName
+    )
+
+    try {
+
+        $List = Get-PnPList -Identity $ListName -ErrorAction SilentlyContinue
+
+        if ($null -eq $List) {
+            Write-Host "List $ListName not found."
+            return
+        }    
+        else {
+            # Write-Host "List $ListName found."
+
+            $List.BreakRoleInheritance($true, $true)
+            $List.Update()
+            Invoke-PnPQuery
+
+            Write-Host "Inheritance broken successfully for list $ListName."
+            return  
+        }
+    }
+    catch {
+        Write-Host "Error: $_"
+    }
+
+}
+
+# Example:
+# Break-Inheritance-List -ListName "Leave Types"
 
 #########################################################################################################
 
