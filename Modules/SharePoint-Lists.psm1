@@ -6,7 +6,6 @@ function Create-SharePoint-Fields {
     param (
         [Parameter(Mandatory = $true)]
         [string]$ListName,
-        [Parameter(Mandatory = $true)]
         [hashtable]$Columns,
         [hashtable]$Choice_Options = $null,
         [hashtable]$LookUpAttributes = $null,
@@ -62,8 +61,11 @@ function Create-SharePoint-Fields {
 
 }
 # Example:
-# Create-SharePoint-Fields -ListName "Leave Requests" -Columns $Columns -Choice_Options $Choice_Options -LookUpAttributes $LookUpAttributes -Formulas $Formulas
-# Where $Columns, $Choice_Options, $LookUpAttributes and $Formulas are defined as:
+# Create-SharePoint-Fields -ListName $ListName -Columns $Columns -Choice_Options $Choice_Options -LookUpAttributes $LookUpAttributes -Formulas $Formulas
+# Where $ListName, $Columns, $Choice_Options, $LookUpAttributes and $Formulas are defined as:
+#
+# $ListName = "Test List"
+#
 # $Columns = @{
 #   "Title" = "Text"                            # Pre-Defined (Single Line of Text)
 #   "Description" = "Note"                      # Works Fine (Multiple Lines of Text)
@@ -122,7 +124,10 @@ function Add-SharePoint-Items {
     param (
         [Parameter(Mandatory = $true)]
         [string]$ListName,
-        [array]$Items
+        [array]$Items,
+        [bool]$isLookup = $false,
+        [string]$LookupList = $null, 
+        [string]$LookupField = "Title"
     )
 
 
@@ -133,6 +138,46 @@ function Add-SharePoint-Items {
 
         if ($null -eq $List) {
             Write-Host "List $ListName does not exist."
+            return
+        }
+
+        if($isLookup) {
+
+            # Check if the lookup list exists
+            $LookupList = Get-PnPList -Identity $LookupList -ErrorAction SilentlyContinue
+            if($null -eq $LookupList) {
+                Write-Host "Lookup List $LookupList does not exist."
+                return
+            }
+
+            $LookupList_Data = Get-PnPListItem -List $LookupList -Fields $LookupField
+
+            if($null -eq $LookupList_Data) {
+                Write-Host "Lookup List $LookupList is empty."
+                return
+            }
+
+            foreach($item in $Items) {
+                foreach($lookupItem in $LookupList_Data) {
+                    if($item[1] -eq $lookupItem[$LookupField]) {
+                        $item[1] = $lookupItem.Id
+                        break
+                    }
+                }
+            }
+
+            foreach($item in $Items) {
+                $ItemExists = Get-PnPListItem -List $ListName -Query "<View><Query><Where><Eq><FieldRef Name='Title'/><Value Type='Text'>$($item.Title)</Value></Eq></Where></Query></View>"
+                if ($null -eq $ItemExists) {
+                    Write-Host "Adding item $($item[0])..."
+                    Add-PnPListItem -List $ListName -Values @{"Title" = $item.Title; $item.Keys[1] = $item[1]}
+                    Write-Host "Item $($item[0]) added."
+                }
+                else {
+                    Write-Host "Item $($item[0]) already exists."
+                }
+            }
+
             return
         }
 
@@ -396,6 +441,36 @@ function Break-Inheritance-List {
 # Break-Inheritance-List -ListName "Leave Types"
 
 #########################################################################################################
+
+# Get-List-Size Function
+function Get-List-Size {
+    param (
+        [Parameter(Mandatory = $true)]
+        [string]$ListName
+    )
+
+    try {
+
+        $List = Get-PnPList -Identity $ListName -ErrorAction SilentlyContinue
+
+        if ($null -eq $List) {
+            Write-Host "List $ListName not found."
+            return
+        }    
+        else {
+            # Write-Host "List $ListName found."
+
+            $ListSize = $List.ItemCount
+
+            Write-Host "List Size: $ListSize"
+            return  
+        }
+    }
+    catch {
+        Write-Host "Error: $_"
+    }
+
+}
 
 # Export the functions
 Export-ModuleMember -Function *
