@@ -1,5 +1,6 @@
 # Import the SharePoint PnP PowerShell module
-Import-Module SharePointPnPPowerShellOnline
+# Import-Module SharePointPnPPowerShellOnline [For PowerShell version 5.1]
+
 
 # Path to the creds.json file
 $creds_file = ".\creds.json"  # creds.json file should not have any spaces or tabs
@@ -9,7 +10,7 @@ $creds_file = ".\creds.json"  # creds.json file should not have any spaces or ta
 
 # Check if the creds.json file exists
 if (-not (Test-Path $creds_file)) {
-    Write-Host "The creds.json file does not exist."
+    Write-Host "The  file $($creds_file) does not exist."
     return
 }
 
@@ -19,9 +20,8 @@ $creds = Get-Content -Raw -Path  $creds_file | ConvertFrom-Json
 try {
     # Connect to the SharePoint site using the provided credentials
     Connect-PnPOnline -Url $creds.sharePointUrl -Credentials (New-Object System.Management.Automation.PSCredential($creds.Username, (ConvertTo-SecureString $creds.Password -AsPlainText -Force)))
+    Write-Host "[Connect-PnPOnline] Connected to SharePoint site: $($creds.sharePointUrl)"
 }
 catch {
-    Write-Host "Error connecting to SharePoint site: $_"
+    Write-Host "[Connect-PnPOnline] Error connecting to SharePoint site: $_"
 }
-# Connect to the SharePoint site using the provided credentials
-# Connect-PnPOnline -Url $creds.sharePointUrl -Credentials (New-Object System.Management.Automation.PSCredential($creds.Username, (ConvertTo-SecureString $creds.Password -AsPlainText -Force)))
